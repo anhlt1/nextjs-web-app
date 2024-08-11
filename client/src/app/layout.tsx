@@ -3,6 +3,7 @@ import { Poppins } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import Header from "@/components/ui/header";
+import { Toaster } from "@/components/ui/toaster";
 
 const pop = Poppins({ subsets: ["latin"], weight: ["400", "500", "700"] });
 
@@ -19,6 +20,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={pop.className}>
+        <Toaster />
         <ThemeProvider
           attribute="class"
           defaultTheme="system"

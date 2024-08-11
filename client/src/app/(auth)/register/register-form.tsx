@@ -44,7 +44,7 @@ export default function RegisterForm() {
         },
       }
     ).then((res) => res.json());
-    console.log(result);
+    // console.log(result);
   }
 
   return (
