@@ -4,6 +4,8 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import Header from "@/components/ui/header";
 import { Toaster } from "@/components/ui/toaster";
+import AppProvider from "@/app/AppProvider";
+import { cookies } from "next/headers";
 
 const pop = Poppins({ subsets: ["latin"], weight: ["400", "500", "700"] });
 
@@ -17,6 +19,8 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const cookieStore = cookies();
+  const sessionToken = cookieStore.get("sessionToken");
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={pop.className}>
@@ -27,9 +31,11 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <h1>Home</h1>
-          <Header></Header>
-          {children}
+          <AppProvider initialSessionToken={sessionToken?.value}>
+            <h1>Home</h1>
+            <Header></Header>
+            {children}
+          </AppProvider>
         </ThemeProvider>
       </body>
     </html>
