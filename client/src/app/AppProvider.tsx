@@ -1,31 +1,19 @@
 "use client";
-import React, { createContext, useContext, useState } from "react";
-
-// tạo context để lưu trữ sessionToken để dùng ở next client
-const AppContext = createContext({
-  sessionToken: "",
-  setSessionToken: (sessionToken: string) => {},
-});
-
-export const useAppContext = () => {
-  const context = useContext(AppContext);
-  if (!context) {
-    throw new Error("useAppContext must be used within AppProvider");
-  }
-  return context;
-};
+import { ClientSessionToken } from "@/lib/http";
+import { useState } from "react";
 
 export default function AppProvider({
-  initialSessionToken,
+  initialSessionToken = "",
   children,
 }: {
   children: React.ReactNode;
   initialSessionToken?: string;
 }) {
-  const [sessionToken, setSessionToken] = useState(initialSessionToken || "");
-  return (
-    <AppContext.Provider value={{ sessionToken, setSessionToken }}>
-      {children}
-    </AppContext.Provider>
-  );
+  // chạy 1 lần duy nhất khi component được render
+  useState(() => {
+    if (typeof window !== undefined) {
+      ClientSessionToken.value = initialSessionToken;
+    }
+  });
+  return <>{children}</>;
 }

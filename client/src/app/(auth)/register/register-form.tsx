@@ -17,10 +17,15 @@ import {
   RegisterBody,
   RegisterBodyType,
 } from "@/schemaValidations/auth.schema";
-import envConfig from "@/config";
+import authApiRequest from "@/apiRequests/auth";
+import { useToast } from "@/components/ui/use-toast";
+import { useRouter } from "next/navigation";
+import { ClientSessionToken } from "@/lib/http";
 
 export default function RegisterForm() {
-  // 1. Define your form.
+  const { toast } = useToast();
+  const router = useRouter();
+
   const form = useForm<RegisterBodyType>({
     resolver: zodResolver(RegisterBody),
     defaultValues: {
@@ -31,20 +36,35 @@ export default function RegisterForm() {
     },
   });
 
-  // 2. Define a submit handler.
   async function onSubmit(values: RegisterBodyType) {
-    // Lưu ý khi lấy api endpoint từ .env thì cần phải sử dụng process.env.NEXT_PUBLIC_API_ENDPOINT thay vì NEXT_PUBLIC_API_ENDPOINT bởi process.env ở phía client chỉ là 1 object rỗng
-    const result = await fetch(
-      `${envConfig.NEXT_PUBLIC_API_ENDPOINT}/auth/register`,
-      {
-        method: "POST",
-        body: JSON.stringify(values),
-        headers: {
-          "Content-type": "application/json",
-        },
+    try {
+      const result = await authApiRequest.register(values);
+      toast({
+        description: result.payload.message,
+      });
+      await authApiRequest.auth({ sessionToken: result.payload.data.token });
+      router.push("/me");
+    } catch (error: any) {
+      const errors = error.payload.errors as {
+        field: string;
+        message: string;
+      }[];
+      const status = error.status as number;
+      if (status === 422) {
+        errors.forEach((e) => {
+          form.setError(e.field as "email" | "password", {
+            type: "server",
+            message: e.message,
+          });
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: error.payload.message,
+          variant: "destructive",
+        });
       }
-    ).then((res) => res.json());
-    // console.log(result);
+    }
   }
 
   return (
