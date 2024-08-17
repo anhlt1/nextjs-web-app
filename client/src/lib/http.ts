@@ -5,12 +5,41 @@ type customOption = Omit<RequestInit, "method"> & {
   baseUrl?: string | undefined;
 };
 
+const ENTITY_ERROR_STATUS = 422;
+
+type EntityErrorPayload = {
+  message: string;
+  errors: {
+    field: string;
+    message: string;
+  }[];
+};
+
 // throw ra lỗi nên throw ra 1 object kế thừa Error object để có được các thông tin lỗi 1 cách chi tiết
-class HttpError extends Error {
+export class HttpError extends Error {
   status: number;
-  payload: any;
+  payload: {
+    message: string;
+    [key: string]: any;
+  };
   constructor({ status, payload }: { status: number; payload: any }) {
     super("Http Error");
+    this.status = status;
+    this.payload = payload;
+  }
+}
+
+export class EntityError extends HttpError {
+  status: 422;
+  payload: EntityErrorPayload;
+  constructor({
+    status,
+    payload,
+  }: {
+    status: 422;
+    payload: EntityErrorPayload;
+  }) {
+    super({ status, payload });
     this.status = status;
     this.payload = payload;
   }
@@ -59,7 +88,7 @@ const request = async <Response>(
     ? `${baseUrl}${url}`
     : `${baseUrl}/${url}`;
 
-    // Thực hiện request
+  // Thực hiện request
   const res = await fetch(fullUrl, {
     ...options,
     headers: {
@@ -78,7 +107,16 @@ const request = async <Response>(
   };
   // Nếu có lỗi, throw ra chi tiết lỗi
   if (!res.ok) {
-    throw new HttpError(data);
+    if (res.status === ENTITY_ERROR_STATUS) {
+      throw new EntityError(
+        data as {
+          status: 422;
+          payload: EntityErrorPayload;
+        }
+      );
+    } else {
+      throw new HttpError(data);
+    }
   }
 
   // Nếu url là /auth/login hoặc /auth/register thì lưu sessionToken vào ClientSessionToken
@@ -99,13 +137,13 @@ const http = {
   // body chứa values được JSON.stringify() do react hook form truyền vào onSubmit
   // Các method POST, PUT, DELETE có tham số body riêng biệt, kết hợp với options khi gọi request : { ...options, body }
   // Việc Omit "body" trong options giúp tránh xung đột, gây nhầm lẫn khi người dùng vô tình truyền body vào options
-//  VD: 
-//  http.post(
-//  '/login',
-//  { username: 'user1', password: 'pass1' },
-//  { body: { username: 'user2', password: 'pass2' } } // Xung đột!
-//  );
-//  Ko rõ liệu body nào sẽ được sử dụng, body của options hay body của request
+  //  VD:
+  //  http.post(
+  //  '/login',
+  //  { username: 'user1', password: 'pass1' },
+  //  { body: { username: 'user2', password: 'pass2' } } // Xung đột!
+  //  );
+  //  Ko rõ liệu body nào sẽ được sử dụng, body của options hay body của request
   post<Response>(
     url: string,
     body: any,

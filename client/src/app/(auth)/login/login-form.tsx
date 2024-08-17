@@ -10,7 +10,8 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { useToast } from "@/components/ui/use-toast";
+import { toast } from "@/components/ui/use-toast";
+import { handleErrorApi } from "@/lib/utils";
 import { LoginBody, LoginBodyType } from "@/schemaValidations/auth.schema";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
@@ -18,8 +19,8 @@ import React from "react";
 import { useForm } from "react-hook-form";
 
 export default function LoginForm() {
-  const { toast } = useToast();
   const router = useRouter();
+  const [loading, setLoading] = React.useState(false);
 
   const form = useForm<LoginBodyType>({
     resolver: zodResolver(LoginBody),
@@ -30,33 +31,20 @@ export default function LoginForm() {
   });
 
   async function onSubmit(values: LoginBodyType) {
+    if (loading) return;
+    setLoading(true);
     try {
       const result = await authApiRequest.login(values);
       toast({
+        title: "Success",
         description: result.payload.message,
       });
       await authApiRequest.auth({ sessionToken: result.payload.data.token });
       router.push("/me");
     } catch (error: any) {
-      const errors = error.payload.errors as {
-        field: string;
-        message: string;
-      }[];
-      const status = error.status as number;
-      if (status === 422) {
-        errors.forEach((e) => {
-          form.setError(e.field as "email" | "password", {
-            type: "server",
-            message: e.message,
-          });
-        });
-      } else {
-        toast({
-          title: "Error",
-          description: error.payload.message,
-          variant: "destructive",
-        });
-      }
+      handleErrorApi({ error, setError: form.setError });
+    } finally {
+      setLoading(false);
     }
   }
   return (
